@@ -108,7 +108,9 @@ def get_server_status():
 
                 for name, url in server_list().items():
                         
-                    print(f'\nSending request to {name} at {url}...')
+                    print(
+                        f'\nSending request to \033[4m{name}\033[0m at {url}...'
+                    )
 
                     try:
                         server_response = requests.get(url, timeout=3)
@@ -288,10 +290,10 @@ def get_server_status():
                     text='Waiting...', 
                     spinner='dots',
                     text_color='white',
-                    color='cyan'
+                    color='white'
                 )
                 def wait():
-                    sleep(10)
+                    sleep(60)
 
                 wait()
 
@@ -308,7 +310,7 @@ def check_for_error_log():
     error_log_path = os.path.dirname(
         os.path.realpath(__file__)
     )
-    
+
     if not os.path.isfile(f'{error_log_path}/errors.log'):
         open('errors.log', 'a').close()
 

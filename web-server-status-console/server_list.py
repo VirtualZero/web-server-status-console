@@ -1,6 +1,6 @@
 def server_list():
     return {
-        'GetIP': 'http://getip.virtualzero.tecH',               # 'App Name': 'URL'
-        'Donate': 'https://donate.virtualzero.tech',            # 'App Name': 'URL'
-        'DateTimeAPI': 'https://datetimeapi.virtualzero.tech'   # 'App Name': 'URL'
+        'WebSite1': 'http://your-domain.com',   # 'App Name': 'URL'
+        'WebSite2': 'http://your-domain.com',   # 'App Name': 'URL'
+        'WebSite3': 'http://your-domain.com',   # 'App Name': 'URL'
     }
