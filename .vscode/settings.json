@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/home/king/anaconda3/envs/web-server-status-console/bin/python",
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
+}
