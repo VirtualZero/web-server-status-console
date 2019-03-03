@@ -73,6 +73,8 @@ def prepare_email_content():
 
     with open('.last_email_sent.txt', 'r') as last_email_sent:
         last_email_sent_time = last_email_sent.read()
+
+    try:
         last_email_datetime_object = datetime.datetime.strptime(
             last_email_sent_time,
             '%Y-%m-%d %H:%M:%S.%f'
@@ -93,6 +95,24 @@ def prepare_email_content():
 
                         else:
                             email_content = f'{email_content}{line}'
+
+    except ValueError:
+        update_last_email_sent_time()
+        with open('errors.log', 'r') as errors_log:
+            for line in errors_log:
+                pass
+            
+            email_content = line
+            return email_content
+
+    except:
+        update_last_email_sent_time()
+        with open('errors.log', 'r') as errors_log:
+            for line in errors_log:
+                pass
+
+            email_content = line
+            return email_content
 
     return email_content                    
 
@@ -182,6 +202,7 @@ def write_to_error_log(name, url, status_code):
         )
 
     return True
+
 
 def get_server_status():
     status_report = {}
