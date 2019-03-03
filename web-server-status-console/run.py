@@ -11,6 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import socket
 
 
 @Halo(
@@ -259,6 +260,24 @@ def get_server_status():
                             url,
                             'Connection timed out.'
                         )
+
+                    except:
+                        status_report[name] = {
+                            'url': url,
+                            'status_code': 'Unknown Error'
+                        }
+
+                        print(
+                            f'Status: {error_status_message}'
+                            f'\nUnknown Error.'
+                        )
+
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Unknown Error.'
+                        )
+
 
                 table_data = [
                     [
