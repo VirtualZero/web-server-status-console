@@ -19,9 +19,19 @@ def email_settings():
         # Your email sender address
         'sender': 'alerts@your-domain.com',
         # Your email recipients, multiple recipients supported
-        'recipients': [                                                 
+        'recipients': [
             'example1@your-domain.com',
             'example2@your-domain.com',
             'example3@your-domain.com'
         ]
     }
+
+
+def scan_interval():
+    #Scan web servers every N minutes, must be Integer
+    return 1
+
+
+def email_interval():
+    # Send error emails every N minutes, must be Integer
+    return 20

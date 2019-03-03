@@ -1,4 +1,3 @@
-from settings import server_list, email_settings
 import requests
 from time import sleep
 from termcolor import colored
@@ -10,7 +9,92 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-import socket
+from settings import (
+    server_list,
+    email_settings,
+    scan_interval,
+    email_interval
+)
+
+
+def check_email_interval():
+    last_email_sent_path = os.path.dirname(
+        os.path.realpath(__file__)
+    )
+
+    if not os.path.isfile(f'{last_email_sent_path}/.last_email_sent.txt'):
+        open('.last_email_sent.txt', 'a').close()
+
+        return True
+
+    with open('.last_email_sent.txt', "r") as last_email_sent:
+        last_email_sent_time = last_email_sent.read()
+
+        if not last_email_sent_time:
+            return True
+
+        try:
+            datetime_object = datetime.datetime.strptime(
+                last_email_sent_time,
+                '%Y-%m-%d %H:%M:%S.%f'
+            )
+
+            if datetime_object + datetime.timedelta(
+                minutes=email_interval()
+            ) > datetime.datetime.now():
+
+                return False
+
+        except ValueError:
+            return True
+
+        except:
+            return True
+
+        return True
+
+
+def update_last_email_sent_time():
+    last_email_sent_path = os.path.dirname(
+        os.path.realpath(__file__)
+    )
+
+    if not os.path.isfile(f'{last_email_sent_path}/.last_email_sent.txt'):
+        open('.last_email_sent.txt', 'a').close()
+
+    with open('.last_email_sent.txt', "w") as last_email_sent:
+        last_email_sent.write(str(datetime.datetime.now()))
+
+    return True
+
+
+def prepare_email_content():
+    email_content = ''
+
+    with open('.last_email_sent.txt', 'r') as last_email_sent:
+        last_email_sent_time = last_email_sent.read()
+        last_email_datetime_object = datetime.datetime.strptime(
+            last_email_sent_time,
+            '%Y-%m-%d %H:%M:%S.%f'
+        )
+
+        with open('errors.log', 'r') as errors_log:
+            for line in errors_log:
+                if '\t' in line:
+                    log_datetime_string = line.split('\t')[0]
+                    log_datetime_object = datetime.datetime.strptime(
+                        log_datetime_string,
+                        '%A, %m/%d/%y %I:%M %p'
+                    )
+
+                    if log_datetime_object > last_email_datetime_object:
+                        if not email_content:
+                            email_content = line
+
+                        else:
+                            email_content = f'{email_content}{line}'
+
+    return email_content                    
 
 
 @Halo(
@@ -20,56 +104,67 @@ import socket
     color='red'
 )
 def send_error_email(name, url, status_code):
-    mail_settings = email_settings()
+    if check_email_interval():
+        mail_settings = email_settings()
 
-    if mail_settings['recipients']:
-        for index, recipient in enumerate(mail_settings['recipients']):
-            body = f'An error occured when scanning a web server.\n'\
-                f'Here are the details:\n'\
-                f'Name: {name}\n'\
-                f'URL: {url}\n'\
-                f'Status Code: {str(status_code)}'
+        if mail_settings['recipients']:
+            for index, recipient in enumerate(mail_settings['recipients']):
+                email_content = prepare_email_content()
+                body = f'Some errors occurred while scanning web servers.\n'\
+                    f'Here are the details:\n'\
+                    f'{email_content}'
 
-            message = MIMEMultipart()
-            message['From'] = mail_settings['sender']
-            message['To'] = mail_settings['recipients'][index]
-            message['Subject'] = 'Error Scanning Web Server'
+                message = MIMEMultipart()
+                message['From'] = mail_settings['sender']
+                message['To'] = mail_settings['recipients'][index]
+                message['Subject'] = 'Error Scanning Web Server'
 
-            message.attach(MIMEText(body, 'plain'))
-            message_string = message.as_string()
+                message.attach(MIMEText(body, 'plain'))
+                message_string = message.as_string()
 
-            server = smtplib.SMTP(
-                mail_settings['smtp_server'],
-                mail_settings['port']
-            )
-
-            server.starttls()
-
-            server.login(
-                mail_settings['username'],
-                mail_settings['password']
-            )
-
-            try:
-                server.sendmail(
-                    mail_settings['sender'],
-                    mail_settings['recipients'][index],
-                    message_string
+                server = smtplib.SMTP(
+                    mail_settings['smtp_server'],
+                    mail_settings['port']
                 )
 
-                server.quit()
+                server.starttls()
 
-            except:
-                error_status_message = colored(
-                    "\u2718", "red"
-                ) + ' Error sending alert email'
-                print(error_status_message)
+                try:
+                    server.login(
+                        mail_settings['username'],
+                        mail_settings['password']
+                    )
 
-    else:
-        error_status_message = colored(
-            "\u2718", "red"
-        ) + ' Error sending alert email: NO RECIPIENTS'
-        print(error_status_message)
+                except:
+                    error_status_message = colored(
+                        "\u2718", "red"
+                    ) + ' Error sending alert email: AUTHENTICATION ERROR'
+                    print(error_status_message)
+                    return False
+
+                try:
+                    server.sendmail(
+                        mail_settings['sender'],
+                        mail_settings['recipients'][index],
+                        message_string
+                    )
+
+                    server.quit()
+
+                    update_last_email_sent_time()
+
+                except:
+                    error_status_message = colored(
+                        "\u2718", "red"
+                    ) + ' Error sending alert email'
+                    print(error_status_message)
+                    return False
+
+        else:
+            error_status_message = colored(
+                "\u2718", "red"
+            ) + ' Error sending alert email: NO RECIPIENTS'
+            print(error_status_message)
 
     return True
 
@@ -132,18 +227,19 @@ def get_server_status():
                                 f'\nResponse Time: {server_response.elapsed}'
                             )
 
-                            send_error_email(
-                                name,
-                                url,
-                                server_response.status_code
-                            )
-
                             write_to_error_log(
                                 name,
                                 url,
                                 server_response.status_code
                             )
 
+                            send_error_email(
+                                name,
+                                url,
+                                server_response.status_code
+                            )
+
+                            
                     except requests.exceptions.ConnectionError:
                         status_report[name] = {
                             'url': url,
@@ -155,18 +251,19 @@ def get_server_status():
                             f'\nCould not establish a connection.'
                         )
 
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Could not establish a connection.'
+                        )
+
                         send_error_email(
                             name, 
                             url, 
                             'Could not establish a connection.'
                         )
 
-                        write_to_error_log(
-                            name,
-                            url,
-                            'Could not establish a connection.'
-                        )
-                    
+                        
                     except requests.exceptions.InvalidURL:
                         status_report[name] = {
                             'url': url,
@@ -178,17 +275,18 @@ def get_server_status():
                             f'\nInvalid URL.'
                         )
 
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Invalid URL.'
+                        )
+
                         send_error_email(
                             name,
                             url,
                             'Invalid URL.'
                         )
 
-                        write_to_error_log(
-                            name,
-                            url,
-                            'Invalid URL.'
-                        )
 
                     except requests.exceptions.MissingSchema:
                         status_report[name] = {
@@ -201,17 +299,18 @@ def get_server_status():
                             f'\nInvalid URL.'
                         )
 
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Invalid URL.'
+                        )
+
                         send_error_email(
                             name,
                             url,
                             'Invalid URL.'
                         )
 
-                        write_to_error_log(
-                            name,
-                            url,
-                            'Invalid URL.'
-                        )
 
                     except requests.exceptions.ReadTimeout:
                         status_report[name] = {
@@ -225,17 +324,18 @@ def get_server_status():
                             f'\nConnection timed out after 3 seconds.'
                         )
 
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Connection timed out after 3 seconds.'
+                        )
+
                         send_error_email(
                             name,
                             url,
                             'Connection timed out after 3 seconds.'
                         )
 
-                        write_to_error_log(
-                            name,
-                            url,
-                            'Connection timed out after 3 seconds.'
-                        )
 
                     except requests.exceptions.Timeout:
                         status_report[name] = {
@@ -248,17 +348,18 @@ def get_server_status():
                             f'\nConnection timed out.'
                         )
 
+                        write_to_error_log(
+                            name,
+                            url,
+                            'Connection timed out.'
+                        )
+
                         send_error_email(
                             name,
                             url,
                             'Connection timed out.'
                         )
 
-                        write_to_error_log(
-                            name,
-                            url,
-                            'Connection timed out.'
-                        )
 
                     except:
                         status_report[name] = {
@@ -311,7 +412,7 @@ def get_server_status():
                     color='white'
                 )
                 def wait():
-                    sleep(60)
+                    sleep(scan_interval() * 60)
 
                 wait()
 
@@ -334,7 +435,6 @@ def check_for_error_log():
 
 
 def main():
-    check_for_error_log()
     get_server_status()
 
 
