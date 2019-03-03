@@ -1,5 +1,4 @@
-from server_list import server_list
-from email_settings import email_settings
+from settings import server_list, email_settings
 import requests
 from time import sleep
 from termcolor import colored
