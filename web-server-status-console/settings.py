@@ -27,6 +27,21 @@ def email_settings():
     }
 
 
+def ec2_access_keys():
+    return {
+        'access_key': 'ACCESS_KEY',
+        'secret_access_key': 'YOUR_SECRET_ACCESS_KEY'
+    }
+
+
+def ec2_reboot_status():
+    return 1
+
+
+def ec2_instance_id():
+    return 'i-12345678987654'
+
+
 def scan_interval():
     #Scan web servers every N minutes, must be Integer
     return 1
@@ -34,4 +49,4 @@ def scan_interval():
 
 def email_interval():
     # Send error emails every N minutes, must be Integer
-    return 20
+    return 1
