@@ -86,3 +86,6 @@ The script will record any errors encountered during exucution in errors.log. Th
 ```bash
 python3 run.py
 ```
+
+#### AWS Credentials
+The script requires valid AWS access and secret access keys. Although the keys can be added to the settings.py file included with the script, it is always best practice to use environment variables to store sensitive information.
