@@ -9,16 +9,11 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-import boto3
-from botocore.exceptions import ClientError
 from settings import (
     server_list,
     email_settings,
     scan_interval,
-    email_interval,
-    ec2_access_keys,
-    ec2_instance_id,
-    ec2_reboot_status
+    email_interval
 )
 
 
@@ -211,39 +206,6 @@ def write_to_error_log(name, url, status_code):
     return True
 
 
-@Halo(
-    text='Rebooting EC2 Instance...',
-    spinner='dots',
-    text_color='white',
-    color='red'
-)
-def reboot_ec2_instance():
-    ec2 = boto3.client(
-        'ec2',
-        region_name='us-east-2',
-        aws_access_key_id=ec2_access_keys()['access_key'],
-        aws_secret_access_key=ec2_access_keys()['secret_access_key']
-    )
-
-    try:
-        response = ec2.reboot_instances(
-            InstanceIds=[
-                ec2_instance_id()
-            ], 
-            DryRun=False
-        )
-
-        sleep(120)
-
-    except:
-        print(
-            colored(
-                "\u2718", "red"
-            ) + ' Error rebooting EC2 Instance.'
-        )
-
-    return response
-
 def get_server_status():
     status_report = {}
     scan_counter = 1
@@ -299,9 +261,6 @@ def get_server_status():
                                 url,
                                 server_response.status_code
                             )
-
-                            if ec2_reboot_status:
-                                reboot_ec2_instance()
 
                             
                     except requests.exceptions.ConnectionError:
@@ -400,9 +359,6 @@ def get_server_status():
                             'Connection timed out after 3 seconds.'
                         )
 
-                        if ec2_reboot_status:
-                            reboot_ec2_instance()
-
 
                     except requests.exceptions.Timeout:
                         status_report[name] = {
@@ -426,9 +382,6 @@ def get_server_status():
                             url,
                             'Connection timed out.'
                         )
-
-                        if ec2_reboot_status:
-                            reboot_ec2_instance()
 
 
                     except:
