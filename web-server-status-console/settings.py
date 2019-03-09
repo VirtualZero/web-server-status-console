@@ -34,4 +34,4 @@ def scan_interval():
 
 def email_interval():
     # Send error emails every N minutes, must be Integer
-    return 60
+    return 1
